@@ -1,5 +1,6 @@
 library(sf)
 library(dplyr)
+library(units)
 library(here)
 
 # Import Source of Water Data Tables
@@ -41,3 +42,7 @@ cnty80 <- st_read(here('data/shapefiles/US_county_1980.shp'))%>%
 cnty90 <- st_read(here('data/shapefiles/US_county_1990.shp'))%>%
   left_join(sow90, by = 'GISJOIN')%>%
   left_join(ph90, by = 'GISJOIN')
+
+
+# Calculate county areas
+cnty70$area <- set_units(st_area(cnty70), km^2)
