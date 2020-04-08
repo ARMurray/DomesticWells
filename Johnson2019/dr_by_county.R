@@ -1,6 +1,7 @@
 library(sf)
 library(dplyr)
 library(units)
+library(ggplot2)
 library(here)
 
 # Import Source of Water Data Tables
@@ -46,3 +47,25 @@ cnty90 <- st_read(here('data/shapefiles/US_county_1990.shp'))%>%
 
 # Calculate county areas
 cnty70$area <- set_units(st_area(cnty70), km^2)
+cnty80$area <- set_units(st_area(cnty80), km^2)
+cnty90$area <- set_units(st_area(cnty90), km^2)
+
+# Calculate Domestic Ratio (DR)
+cnty70$dr <- cnty70$Well/cnty70$H_Units
+cnty80$dr <- (cnty80$Drilled+cnty80$Dug)/cnty80$H_Units
+cnty90$dr <- (cnty90$Drilled=cnty90$Dug)/cnty90$H_Units
+
+# Calculate housing unit density
+cnty70$hu_density <- cnty70$H_Units/cnty70$area
+cnty80$hu_density <- cnty80$H_Units/cnty80$area
+cnty90$hu_density <- cnty90$H_Units/cnty90$area
+
+# Plots of wells vs housing unit density
+ggplot()+
+  geom_point(data = cnty70, aes(x=as.numeric(hu_density), y=dr),color='red')+
+  geom_point(data = cnty80, aes(x=as.numeric(hu_density), y=dr),color='blue')+
+  geom_point(data = cnty90, aes(x=as.numeric(hu_density), y=dr),color='green')+
+  xlim(xmin=0,xmax=1000)
+
+
+# Longitudinal plot
