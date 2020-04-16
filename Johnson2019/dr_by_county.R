@@ -53,7 +53,7 @@ cnty90$area <- set_units(st_area(cnty90), km^2)
 # Calculate Domestic Ratio (DR)
 cnty70$dr <- cnty70$Well/cnty70$H_Units
 cnty80$dr <- (cnty80$Drilled+cnty80$Dug)/cnty80$H_Units
-cnty90$dr <- (cnty90$Drilled=cnty90$Dug)/cnty90$H_Units
+cnty90$dr <- (cnty90$Drilled+cnty90$Dug)/cnty90$H_Units
 
 # Calculate housing unit density
 cnty70$hu_density <- cnty70$H_Units/cnty70$area
@@ -69,3 +69,34 @@ ggplot()+
 
 
 # Longitudinal plot
+acnty70 <- cnty70%>%
+  select(GISJOIN,hu_density,dr)%>%
+  mutate("Year" = 1970)
+
+acnty80 <- cnty80%>%
+  select(GISJOIN,hu_density,dr)%>%
+  mutate("Year" = 1980)
+
+acnty90 <- cnty90%>%
+  select(GISJOIN,hu_density,dr)%>%
+  mutate("Year" = 1990)
+
+long <- rbind(acnty70,acnty80,acnty90)
+
+lonPlot <- ggplot(long)+
+  geom_line(aes(x = Year, y = dr, group = GISJOIN, col = log(as.numeric(hu_density))))
+lonPlot
+
+# Regressions
+lm <- lm(long$dr~long$hu_density)
+summary(lm)
+
+lm90 <- lm(acnty90$dr~acnty90$hu_density)
+summary(lm90)
+
+
+# Plots
+
+# 1990 Housing units vs Wells
+ggplot(cnty90)+
+  geom_point(aes(x=Drilled+Dug, y = H_Units/as.numeric(area)))
