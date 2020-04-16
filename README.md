@@ -10,17 +10,16 @@ GIS Boundary Shapefiles:
 1.	1990 Census Block Groups
 2.	2000 Census Block Groups (2010 Edition)
 3.	2010 Census Block Groups
-4.	2010 Census Water Area
 
 Data Tables:
 - 1990 Census
-  - Source of Water
-  - Housing Units
+  - Source of Water (1990 Census: STF 3 - Sample-Based Data)
+  - Housing Units (1990 Census: STF 1 - 100% Data)
 - 2000 Census
-  - Housing Units
+  - Housing Units (2000 Census: SF 1b - 100% Data [Blocks & Block Groups])
 - 2010 Census
-  - Housing Units
-  - Total Population
+  - Housing Units (2010 Census: SF 1a - P & H Tables [Blocks & Larger Areas])
+  - Total Population (2010 Census: SF 1a - P & H Tables [Blocks & Larger Areas])
 
 
 ## Software:
@@ -30,9 +29,12 @@ Data Tables:
   -dplyr
   -sf
   -tidyr
+  -here
   
 ## Data Preparation
 
 | spatial data is delivered in shapefile format from NHGIS and while it is still the most widely use spatial file format, it is not particularly fast. For this reason, we want to convert the format to something more compact that will load and process faster. For this, we will use the [geopackage format](https://www.gis-blog.com/geopackage-vs-shapefile/).
+
+Using the script '01_table_join_to_geopackage.R', convert the block group shapefiles to geopackages and join the tabular data from the Census (downloaded from NHGIS).
 
 
