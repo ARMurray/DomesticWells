@@ -11,10 +11,15 @@ sf <- st_read(here("data/geopackage/nhgis_block_groups.gpkg"), layer = "US_block
 sf$Well_Rate[is.na(sf$Well_Rate)] <- 0
 
 # Histogram
-ggplot(sf)+
-  geom_histogram(aes(Well_Rate), bins = 20)+
-  scale_x_continuous(labels = scales::percent)+
-  scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE))+
-  labs(title = "Percentage Housing Units Using Wells (1990 Block Groups)",
-       x = " Percent Using Wells",
-       y = "Number of Block Groups")
+sf%>%
+  filter(Well_Rate>0)%>%
+  ggplot()+
+    geom_histogram(aes(Well_Rate),color = "#ffffff",fill="#4B9CD3", bins = 20)+
+    scale_x_continuous(labels = scales::percent)+
+    scale_y_continuous(labels=function(x) format(x, big.mark = ",", scientific = FALSE))+
+    labs(title = "Percent of Housing Units Using Wells (1990 Block Groups)",
+         x = " Percent Using Wells",
+         y = "Number of Block Groups")
+
+zero <- sf%>%
+  filter(Well_Rate==0)
