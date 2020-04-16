@@ -41,6 +41,6 @@ Using the script '01_table_join_to_geopackage.R', convert the block group shapef
 
 Now that the data is prepared, the next step is to calculate the rate of well use for each block group in the United States for 1990. Use the script titled '02_well_rate_calculations_90.R' to calculate this.
 
-![](/plots/zonzero_Well_Rate_1990.jpeg)
+![test](/plots/nonzero_Well_Rate_1990.jpeg)
 
 The rate of well usage per block group in 1990. Blcok groups with a rate of zero (n = 128,725) not shown in this plot
