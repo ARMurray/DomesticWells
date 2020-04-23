@@ -4,7 +4,7 @@ library(raster)
 library(here)
 library(units)
 
-
+########################################################################################
 
 
 
@@ -44,15 +44,24 @@ sfEA$well_Density <- (sfEA$Drill_sow+sfEA$Dug_sow) / sfEA$Area
 #wellDensity_90 <- rasterize(sfEA,r, field = 'well_Density')
 
 
-####### ONE STATE AT A TIME #######
+####### ONE COUNTY AT A TIME #######
 
-# Create list of all state fips codes
-states <- levels(sfEA$ST_FIPS)
+# Create list of all county fips codes
+sfEA$STCO <- paste0(as.character(sfEA$ST_FIPS),as.character(sfEA$CO_FIPS))
+
+counties <- sfEA%>%
+  dplyr::select(STCO)%>%
+  st_drop_geometry()%>%
+  distinct()%>%
+  split(counties$STCO, seq(nrow(counties)))
+
+
+sfEA$STCO <- as.character(sfEA$STCO)
 
 # Create for loop
-for(n in states){
+for(n in counties){
   sub <- sfEA%>%
-    filter(ST_FIPS == n)
+    filter(STCO == n)
   print(paste0("Starting ",n," at: ",Sys.time()))
   extent <- st_bbox(sub)
   rows <- round(as.numeric(extent$ymax - extent$ymin)/20,0)
