@@ -38,8 +38,7 @@ bg1990 <- st_read(here("data/shapefiles/US_blck_grp_1990.shp"))%>%
          Public_sow,Drill_sow,Dug_sow,Other_sow)
 
 # Export prepared data to a geopackage
-st_write(bg1990, here("data/geopackage/nhgis_block_groups.gpkg"),layer = "US_block_groups_1990",driver = "GeoJSON")
-
+st_write(bg1990, here("data/GeoJSON/US_block_groups_1990"),driver = "GeoJSON")
 
 
 
@@ -65,7 +64,7 @@ bg2000 <- st_read(here("data/shapefiles/US_blck_grp10_2000.shp"))%>%
          Population,Housing_Units)
 
 # Export prepared data to a geopackage
-st_write(bg2000, here("data/geopackage/nhgis_block_groups.gpkg"),layer = "US_block_groups_2000",driver = "GPKG")
+st_write(bg2000, here("data/GeoJSON/US_block_groups_2000"),driver = "GeoJSON")
 
 
 
@@ -93,5 +92,5 @@ bg2010 <- st_read(here("data/shapefiles/US_blck_grp_2010.shp"))%>%
          Population,Housing_Units)
 
 # Export prepared data to a geopackage
-st_write(bg2010, here("data/geopackage/nhgis_block_groups.gpkg"),layer = "US_block_groups_2010",driver = "GPKG")
+st_write(bg2010, here("data/GeoJSON/US_block_groups_2010"),driver = "GeoJSON")
 
