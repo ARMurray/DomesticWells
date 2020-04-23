@@ -1,5 +1,6 @@
 library(sf)
 library(dplyr)
+library(raster)
 library(here)
 library(units)
 
@@ -20,6 +21,12 @@ sfEA$Area <- st_area(sfEA)%>%
 # Calculate well density
 sfEA$well_Density <- (sfEA$Drill_sow+sfEA$Dug_sow) / sfEA$Area
 
+
+# Write some temporary files to get this to run faster on longleaf
+#st_write(sfEA, here("data/temp/sfEA_shp"),driver = "ESRI Shapefile")
+#st_write(sfEA, here("data/temp/sfEA_json"),driver = "GeoJSON")
+#st_write(sfEA, here("data/temp/sfEA_kml"),driver = "KML")
+
 # Get bounding box of polygons
 extent <- st_bbox(sfEA) 
 
@@ -31,3 +38,5 @@ r <- raster(ncol = cols, nrow = rows)
 extent(r) <- extent(sfEA)
 
 plot(r)
+
+rr <- rasterize(sfEA,r, field = 'well_Density')
