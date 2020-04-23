@@ -61,7 +61,7 @@ sfEA$STCO <- as.character(sfEA$STCO)
 # Create for loop
 for(n in counties){
   sub <- sfEA%>%
-    filter(STCO == n)
+    filter(STCO == as.character(n))
   print(paste0("Starting ",n," at: ",Sys.time()))
   extent <- st_bbox(sub)
   rows <- round(as.numeric(extent$ymax - extent$ymin)/20,0)
