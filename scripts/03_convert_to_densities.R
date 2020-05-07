@@ -10,7 +10,8 @@ library(units)
 
 
 ### 1990 Block Groups ###
-sf <- st_read(here("data/geopackage/nhgis_block_groups.gpkg"), layer = "US_block_groups_1990")
+sf <- st_read(here("data/geopackage/nhgis_block_groups.gpkg"), layer = "US_block_groups_1990") # Geopackage
+sf <- st_read(here("data/temp/sfEA_shp/sfEA.shp")) # Shapefile
 # Project to equal area
 sfEA <- st_transform(sf, crs = 2163)
 
@@ -19,7 +20,7 @@ sfEA$Area <- st_area(sfEA)%>%
   set_units(km^2)
 
 # Calculate well density
-sfEA$well_Density <- (sfEA$Drill_sow+sfEA$Dug_sow) / sfEA$Area
+sfEA$well_Density <- (sfEA$Drll_sw+sfEA$Dug_sow) / sfEA$Area
 
 
 # The next step is to rasterize the data. This is a very computationally intense operation
