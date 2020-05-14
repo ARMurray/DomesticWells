@@ -35,14 +35,15 @@ Data Tables:
 
 | spatial data is delivered in shapefile format from NHGIS and while it is still the most widely use spatial file format, it is not particularly fast. For this reason, we want to convert the format to something more compact that will load and process faster. For this, we will use the [geopackage format](https://www.gis-blog.com/geopackage-vs-shapefile/).
 
-Using the script '01_table_join_to_geopackage.R', convert the block group shapefiles to geopackages and join the tabular data from the Census (downloaded from NHGIS).
+Using the script '01_dataPrep.R', convert the block group shapefiles to geopackages and join the tabular data from the Census (downloaded from NHGIS).
 
-## Calculate Rate of Well Usage
+## Convert to Densities and Rasterize
+Data from the *1990 & 2000 Census* are in vector format, but must be rasterized before conversion to 2010 boundaries can occur. Conversion to 2010 boundaries is essential in order to do calculations based on Census data accross time. 
 
-Now that the data is prepared, the next step is to calculate the rate of well use for each block group in the United States for 1990. Use the script titled '02_well_rate_calculations_90.R' to calculate this.
+Now that the data is prepared, the next step is to calculate the rate of well use for each block group in the United States for 1990. Then we convert all of the data we plan to use from 1990 and 2000 into densities and rasterize them. Later on we will overlay 2010 boundaries on top of these rasters to convert census boundaries from 1990 & 2000 to 2010. Use the script titled '02_convert_to_densities.R' to calculate this.
 
 ![](/plots/nonzero_Well_Rate_1990.jpeg)
 
-The rate of well usage per block group in 1990. Bloc0k groups with a rate of zero (n = 128,725) not shown in this plot
+The rate of well usage per block group in 1990. Block groups with a rate of zero (n = 128,725) not shown in this plot
 
-## Convert Values to Densities
+|       To rasterize 

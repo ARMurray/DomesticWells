@@ -1,0 +1,26 @@
+[general]
+creator=R package 'raster'
+created=2020-05-14 14:22:39
+[georeference]
+nrows=1509
+ncols=1252
+xmin=2319621.24655754
+ymin=17681.6564488654
+xmax=2344668.17064218
+ymax=47864.4840295644
+projection=+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +a=6370997 +b=6370997 +units=m +no_defs
+[data]
+datatype=FLT4S
+byteorder=little
+nbands=1
+bandorder=BIL
+categorical=FALSE
+minvalue=0
+maxvalue=122.357688903809
+nodatavalue=-3.4e+38
+[legend]
+legendtype=
+values=
+color=
+[description]
+layername=well_density_90_44005
