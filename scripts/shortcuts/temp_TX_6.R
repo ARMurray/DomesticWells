@@ -58,17 +58,15 @@ mosaicList <- function(rasList){
 
 # Create a list of all of the states that have already been completed. Also remove Washington DC, since it is already one
 # raster, it does not need to be mosaiced and will cause an error if you try
-layers <- st_layers(here("data/geopackage/reag_2010_boundaries.gpkg"))
+layers <- st_layers(here("data/geopackage/reagg_2010_boundaries.gpkg"))
 run <- substr(layers$name,19,20)
 
 # Refine state list by removing states that have already run
 #states <- setdiff(states, run) # returns values in 'counties' that are not in 'run'
-
-# Make sure to remove Washington DC as this needs to be run by itself, since it is only one 'county'.
-states <- states[states != "11"]
+#states <- states[states != "11"]
 
 # Or you can make a filter to just run one or some of the states
-#states <- c("01","02","04")
+states <- c("48")
 
 # Using full.names = FALSE here will give us a short name which we can extract the state fips code from
 stateFips <- data.frame(file = list.files(here("data/rasters/County_Well_Densities_1990_100m"),full.names = FALSE,pattern = '.tif$'))%>%
@@ -85,7 +83,7 @@ filesDF <- data.frame(wells90_file = list.files(here("data/rasters/County_Well_D
          hu00_file = as.character(hu00_file))
 
 # Now we write a loop which will subset our rasters by each state, then feed that subset to the mosaic function
-# we wrote at the beginning of this script. We can then use the raster::extract() function to reagregate the data
+# we wrote at the beginning of this script. We can then use the raster::extract() function to reaggregate the data
 
 for(n in states){
   print(paste0("Starting ",n," at: ",Sys.time()))
@@ -97,48 +95,47 @@ for(n in states){
   print(paste0("Finished 1990 Well Density Mosaic for ",n," at: ",Sys.time()," ... Starting 1990 Housing Units ..."))
   
   # Mosaic 1990 Housing Units
-  #hu90mos <- mosaicList(sub$hu90_file)
-  #print(paste0("Finished 1990 Housing Unit Density Mosaic for ",n," at: ",Sys.time()," ... Starting 2000 Housing Units ..."))
+  hu90mos <- mosaicList(sub$hu90_file)
+  print(paste0("Finished 1990 Housing Unit Density Mosaic for ",n," at: ",Sys.time()," ... Starting 2000 Housing Units ..."))
   
   # Mosaic 2000 Housing Units
-  #hu00mos <- mosaicList(sub$hu00_file)
-  #print(paste0("Finished 2000 Housing Unit Density Mosaic for ",n," at: ",Sys.time()," ... Starting Raster Extractions ..."))
+  hu00mos <- mosaicList(sub$hu00_file)
+  print(paste0("Finished 2000 Housing Unit Density Mosaic for ",n," at: ",Sys.time()," ... Starting Raster Extractions ..."))
   
   # subset features to the state
   sfSub <- sf%>%
-    filter(STATEFP10 == n)
+    dplyr::filter(STATEFP10 == n )%>%
+    mutate(COUNTYFP10 = as.character(COUNTYFP10))
   
-  # extract raster values to 2010 Census boundaries
-  print(paste0("Extracting 1990 Well Density ...", Sys.time()))
-  sfSub$wells_km2_90 <- raster::extract(wells90mos,sfSub, fun = mean)
-  print(paste0("1990 Well Density Extraction Completed for ",n," at: ", Sys.time(), " ... Moving to 1990 Housing Unit Density ..."))
+  # Make a data frame of county fips codes
+  cntyFP <- sfSub%>%
+    dplyr::select(COUNTYFP10)%>%
+    st_drop_geometry()%>%
+    distinct()
   
-  sfSub$hu_km2_90 <- raster::extract(hu90mos,sfSub, fun = mean)
-  print(paste0("1990 Housing Unit Density Extraction Completed for ",n," at: ", Sys.time(), " ... Moving to 2000 Housing Unit Density ..."))
+  # Let's create subsets of these so we can run them accross multiple nodes
+  cntySub <- cntyFP[218:254,1]
   
-  sfSub$hu_km2_00 <- raster::extract(hu00mos,sfSub, fun = mean)
-  print(paste0("2000 Housing Unit Density Extraction Completed for ",n," at: ", Sys.time(), " ... Saving File ..."))
+  # Write a for loop to iterate by county
+  for( i in cntySub){
+    cnty <- sfSub%>%
+      dplyr::filter(COUNTYFP10 == i)
+    
+    # Well Density 1990
+    print(paste0("Extracting 1990 Well Density ...", Sys.time()))
+    cnty$wells_km2_90 <- raster::extract(wells90mos,cnty, fun = mean)
+    print(paste0("1990 Well Density Extraction Completed for ",i," at: ", Sys.time(), " ...Moving to 1990 Housing Unit Density..."))
+    
+    # Housing Unit Density 1990
+    cnty$hu_km2_90 <- raster::extract(hu90mos,cnty, fun = mean)
+    print(paste0("1990 Housing Unit Density Extraction Completed for ",i," at: ", Sys.time(), " ...Moving to 2000 Housing Unit Density..."))
+    
+    # Housing Unit Density 2000
+    cnty$hu_km2_00 <- raster::extract(hu00mos,cnty, fun = mean)
+    print(paste0("2000 Housing Unit Density Extraction Completed for ",i," at: ", Sys.time(), " ...SAVING..."))
+    
+    st_write(cnty, here("data/geopackage/Texas_reagg_6.gpkg"), layer = paste0("Texas_",i,"_reagg_2010_boundaries_1"))
+  }
   
-  # Save the file
-  st_write(sfSub,here("data/geopackage/reag_2010_boundaries.gpkg"), layer = paste0("2010_Block_Groups_wd90_",n))
   
-  print(paste0("Finished Writing ",n," at: ",Sys.time()))
 }
-
-# We need to do Wsahington DC seperately because it does not have multiple 
-# counties to iterate through, so the loop does not work in the same way.
-
-sfDC <- sf%>%
-  filter(STATEFP10 == '11')
-
-wd90DC <- raster(here("data/rasters/County_Well_Densities_1990_100m/well_density_90_11001.tif"))
-hu90DC <- raster(here("data/rasters/County_HU_Densities_1990_100m/hu_density_90_11001.tif"))
-hu00DC <- raster(here("data/rasters/County_HU_Densities_2000_100m/hu_density_00_11001.tif"))
-
-sfDC$wells_km2_90 <- raster::extract(wd90DC,sfDC, fun = mean)
-sfDC$hu_km2_90 <- raster::extract(hu90DC,sfDC, fun = mean)
-sfDC$hu_km2_00 <- raster::extract(hu00DC,sfDC, fun = mean)
-
-# Save the file
-st_write(sfDC,here("data/geopackage/reag_2010_boundaries.gpkg"), layer = "2010_Block_Groups_11")
-
