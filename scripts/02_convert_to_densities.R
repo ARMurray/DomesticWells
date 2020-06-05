@@ -1,124 +1,115 @@
 library(sf)
-library(tidyverse)
+library(dplyr)
 library(raster)
+library(units)
 library(here)
 
-# STEPS:
-#
-# 1. Mosaic county rasters into states
-# 2. Extract raster values to 2010 boundaries
-# 3. Save as a geopackage
 
+### 1990 Block Groups ###
+sf <- st_read(here("data/geopackage/nhgis_block_groups.gpkg"), layer = "US_block_groups_1990") # Import prepared 1990 data
+# Project to equal area
+sfEA <- st_transform(sf, crs = 2163)
 
-# Import the 2010 boundaries 
-sf <- st_read(here("data/geopackage/nhgis_block_groups.gpkg"),layer = "US_block_groups_2010")%>%
-  st_transform(crs = 2163)
+# Calculate area of each block group in square km
+sfEA$Area <- st_area(sfEA)%>%
+  set_units(km^2)
 
-# We created the rasters by county, but we want to do the conversions at the state level
-# so we need to mosaic together all of the rasters by state
+# Calculate well density
+sfEA$well_Density <- (sfEA$Drill_sow+sfEA$Dug_sow) / sfEA$Area
 
-# Create a list of state fips codes
-states <- levels(sf$STATEFP10)
+# Calculate housing unit density
+sfEA$hu_Density <- sfEA$Housing_Units / sfEA$Area
 
-# Link: https://gis.stackexchange.com/questions/226351/combine-multiple-partially-overlapping-rasters-into-a-single-raster-in-r
+###############################################################################################
+# The next step is to rasterize the data. This is a very computationally intense operation.   #
+# Here, we iterate through one county at a time. If we tried to do the whole country at once, #
+# we would needlessly include a large chunk of the Pacific Ocean in our raster, which would   #
+# obviously be much more computationally intense. If you still find that your comuter cannot  #
+# handle this, you could replace the county FIPS with GISJOIN in the loop to iterate through  #
+# through block groups instead of counties. This for loop is designed so that if you do not   #
+# finish in one sn, it will pick up where you left off next time. It does this by checking    #
+# output folder and removing any counties that have already been run from the list of         #
+# counties that will be run in the loop.                                                      #
+###############################################################################################
 
-# Write a function that will iterate through files to mosaic multiple rasters at once Credit ^^^
-mosaicList <- function(rasList){
-  
-  #Internal function to make a list of raster objects from list of files.
-  ListRasters <- function(list_names) {
-    raster_list <- list() # initialise the list of rasters
-    for (i in 1:(length(list_names))){ 
-      grd_name <- list_names[i] # list_names contains all the names of the images in .grd format
-      raster_file <- raster::raster(grd_name)
-    }
-    raster_list <- append(raster_list, raster_file) # update raster_list at each iteration
-  }
-  
-  #convert every raster path to a raster object and create list of the results
-  raster.list <-sapply(rasList, FUN = ListRasters)
-  
-  # edit settings of the raster list for use in do.call and mosaic
-  names(raster.list) <- NULL
-  #####This function deals with overlapping areas
-  raster.list$fun <- mean
-  
-  #run do call to implement mosaic over the list of raster objects.
-  mos <- do.call(raster::mosaic, raster.list)
-  
-  #set crs of output
-  crs(mos) <- crs(x = raster(rasList[1]))
-  return(mos)
+#####################################
+# 1990 Well Density & Housing Units #
+#####################################
+
+# Create list of all County fips codes
+sfEA$STCO <- as.factor(paste0(sfEA$ST_FIPS,sfEA$CO_FIPS))   # Create Column for State/County FIPS
+counties <- levels(sfEA$STCO)                 # Make a list of all State/county fips combinations
+
+# Create a list of all of the counties that have already been completed
+files <- list.files(here("data/rasters/County_HU_Densities_1990"))
+run <- substr(files,15,19)
+
+# Refine county list by removing counties that have already run
+counties <- setdiff(counties, run) # returns values in 'counties' that are not in 'run'
+
+# Create for loop
+for(n in counties){
+  sub <- sfEA%>%
+    filter(STCO == n)                                # Subset one county at a time
+  print(paste0("Starting ",n," (",sub$COUNTY[1],")"," at: ",Sys.time()))    # Print the start time for each county
+  extent <- st_bbox(sub)                             # Find the spatial extent of that county to make an empty raster
+  rows <- round(as.numeric(extent$ymax - extent$ymin)/20,0)  # Do the math to figure out how many cells 
+  cols <- round(as.numeric(extent$xmax - extent$xmin)/20,0)  # the empty raster should be
+  r <- raster(ncol = cols, nrow = rows)              # Create the empty raster
+  extent(r) <- extent(sub)                           # Make the extent of the empty raster identical to the county
+  rast1 <- rasterize(sub,r, field = 'well_Density')   # Rasterize the Well density into the empty raster
+  projection(rast1) <- "+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +a=6370997 +b=6370997 +units=m +no_defs"
+  origin(rast1) <- c(0,0)
+  writeRaster(rast1,paste0(here("data/rasters/County_Well_Densities_1990"),"/well_density_90_",n),format = "GTiff") # Write the raster to a folder
+  rast2 <- rasterize(sub,r, field = 'hu_Density')   # Rasterize the Housing Unit density into the empty raster
+  projection(rast2) <- "+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +a=6370997 +b=6370997 +units=m +no_defs"
+  origin(rast2) <- c(0,0)
+  writeRaster(rast2,paste0(here("data/rasters/County_HU_Densities_1990"),"/hu_density_90_",n),format = "GTiff") # Write the raster to a folder
+  print(paste0("Finished ",n," at: ",Sys.time()))
 }
 
-# Next, we need to make a list of all of the rasters we have created in the previous step. We create a data frame that
-# has a column for the file path of each raster and a colum denoting the state fips code for that raster.
 
-# 1990 Well Densities
+#####################################
+#        2000 Housing Units         #
+#####################################
 
-# Create a list of all of the states that have already been completed. Also remove Washington DC, since it is already one
-# raster, it does not need to be mosaiced and will cause an error if you try
-#files <- list.files(here("data/zonal_statistics"))
-#run <- substr(files,24,25)
+### 2000 Block Groups ###
+sf2 <- st_read(here("data/geopackage/nhgis_block_groups.gpkg"), layer = "US_block_groups_2000") # Import prepared 1990 data
+# Project to equal area
+sfEA2 <- st_transform(sf2, crs = 2163)
 
-# Refine state list by removing states that have already run
-#states <- setdiff(states, run) # returns values in 'counties' that are not in 'run'
-#states <- states[states != "11"]
+# Calculate area of each block group in square km
+sfEA2$Area <- st_area(sfEA2)%>%
+  set_units(km^2)
 
-# Here you can make a filter to just run one or some of the states
-states <- c("26","27","28")
+# Calculate housing unit density
+sfEA2$hu_Density <- sfEA2$Housing_Units / sfEA2$Area
 
-# Using full.names = FALSE here will give us a short name which we can extract the state fips code from
-stateFips <- data.frame(file = list.files(here("data/rasters/County_Well_Densities_1990_100m"),full.names = FALSE,pattern = '.tif$'))%>%
-  mutate(STATE_FP = substr(file,17,18))%>%
-  dplyr::select(STATE_FP)
+# Create list of all County fips codes
+sfEA2$STCO <- as.factor(paste0(sfEA2$STATEFP00,sfEA2$COUNTYFP00))   # Create Column for State/County FIPS
+counties <- levels(sfEA2$STCO)                 # Make a list of all State/county fips combinations
 
-# Using full.names = TRUE here will give us the full file path, which will be different on different computers.
-filesDF <- data.frame(wells90_file = list.files(here("data/rasters/County_Well_Densities_1990_100m"),full.names = TRUE,pattern = '.tif$'),
-                      hu90_file = list.files(here("data/rasters/County_HU_Densities_1990_100m"),full.names = TRUE,pattern = '.tif$'),
-                      hu00_file = list.files(here("data/rasters/County_HU_Densities_2000_100m"),full.names = TRUE,pattern = '.tif$'))%>%
-  cbind(stateFips)%>%
-  mutate(wells90_file = as.character(wells90_file),
-         hu90_file = as.character(hu90_file),
-         hu00_file = as.character(hu00_file))
+# Create a list of all of the counties that have already been completed 
+# (This helps if you need more than one session to complete the for loop)
+files <- list.files(here("data/rasters/County_HU_Densities_2000"))
+run <- substr(files,15,19)
 
-# Now we write a loop which will subset our rasters by each state, then feed that subset to the mosaic function
-# we wrote at the beginning of this script. We can then use the raster::extract() function to reaggregate the data
+# Refine county list by removing counties that have already run
+counties <- setdiff(counties, run) # returns values in 'counties' that are not in 'run'
 
-for(n in states){
-  print(paste0("Starting ",n," at: ",Sys.time()))
-  sub <- filesDF%>%
-    filter(STATE_FP == n)
-  
-  # Mosaic 1990 wells
-  wells90mos <- mosaicList(sub$wells90_file)
-  print(paste0("Finished 1990 Well Density Mosaic for ",n," at: ",Sys.time()," ... Starting 1990 Housing Units ..."))
-  
-  # Mosaic 1990 Housing Units
-  hu90mos <- mosaicList(sub$hu90_file)
-  print(paste0("Finished 1990 Housing Unit Density Mosaic for ",n," at: ",Sys.time()," ... Starting 2000 Housing Units ..."))
-  
-  # Mosaic 2000 Housing Units
-  hu00mos <- mosaicList(sub$hu00_file)
-  print(paste0("Finished 2000 Housing Unit Density Mosaic for ",n," at: ",Sys.time()," ... Starting Raster Extractions ..."))
-  
-  # subset features to the state
-  sfSub <- sf%>%
-    filter(STATEFP10 == n)
-  
-  # extract raster values to 2010 Census boundaries
-  print(paste0("Extracting 1990 Well Density ...", Sys.time()))
-  sfSub$wells_km2_90 <- raster::extract(wells90mos,sfSub, fun = mean)
-  print(paste0("1990 Well Density Extraction Completed for ",n," at: ", Sys.time(), " ... Moving to 1990 Housing Unit Density ..."))
-  
-  sfSub$hu_km2_90 <- raster::extract(hu90mos,sfSub, fun = mean)
-  print(paste0("1990 Housing Unit Density Extraction Completed for ",n," at: ", Sys.time(), " ... Moving to 2000 Housing Unit Density ..."))
-  
-  sfSub$hu_km2_00 <- raster::extract(hu00mos,sfSub, fun = mean)
-  print(paste0("2000 Housing Unit Density Extraction Completed for ",n," at: ", Sys.time(), " ... Saving File ..."))
-  
-  # Save the file
-  st_write(sfSub,here("data/geopackage/reagg_2010_boundaries.gpkg"), layer = paste0("2010_Block_Groups_",n))
-  
-  print(paste0("Finished Writing ",n," at: ",Sys.time()))
+# Create for loop
+for(n in counties){
+  sub <- sfEA2%>%
+    filter(STCO == n)                                # Subset one county at a time
+  print(paste0("Starting ",n," at: ",Sys.time()))    # Print the start time for each county
+  extent <- st_bbox(sub)                             # Find the spatial extent of that county to make an empty raster
+  rows <- round(as.numeric(extent$ymax - extent$ymin)/20,0)  # Do the math to figure out how many cells 
+  cols <- round(as.numeric(extent$xmax - extent$xmin)/20,0)  # the empty raster should be
+  r <- raster(ncol = cols, nrow = rows)              # Create the empty raster
+  extent(r) <- extent(sub)                           # Make the extent of the empty raster identical to the county
+  rast <- rasterize(sub,r, field = 'hu_Density')   # Rasterize the Housing Unit density into the empty raster
+  projection(rast) <- "+proj=laea +lat_0=45 +lon_0=-100 +x_0=0 +y_0=0 +a=6370997 +b=6370997 +units=m +no_defs" #Match the projection to the input polygons
+  origin(rast) <- c(0,0) # Set the origin point to 0,0 to facilitate merging later
+  writeRaster(rast,paste0(here("data/rasters/County_HU_Densities_2000"),"/hu_density_00_",n),format = "GTiff") # Write the raster to a folder
+  print(paste0("Finished ",n," at: ",Sys.time()))
 }

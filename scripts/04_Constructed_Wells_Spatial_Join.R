@@ -46,7 +46,7 @@ wells_2000_2010 <- join%>%
   dplyr::filter(Date_Constructed > ymd("2000-03-31") & 
            Date_Constructed < ymd("2010-04-01"))
 
-tbl_2000_2010 <- as.data.frame(table(wells_1990_2000$GISJOIN))
+tbl_2000_2010 <- as.data.frame(table(wells_2000_2010$GISJOIN))
 colnames(tbl_2000_2010) <- c("GISJOIN","Wells_Cnstrctd_00_10")
 
 
