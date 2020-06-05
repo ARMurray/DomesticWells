@@ -24,28 +24,33 @@ Data Tables:
 
 ## Software:
 
-  You will need a recent distribution of R and R Studio. The packages you will need to install are listed here:
+You will need a recent distribution of R and R Studio. The packages you will need to install are listed here:
   
-- tidyverse
+  - tidyverse
   
-- sf
+  - sf
   
-- here
+  - here
   
-- units
+  - units
   
-- lubridate
+  - lubridate
 
-- raster
+  - raster
 
+`<addr>`
+
+'is this code'
+
+<what about this>
 
 ## Scripts
 
-|       Once you have downloaded this repository, and the necesarry files from NHGIS, you are ready to proceed through the scripts used in the anlysis. The scripts must be run in order as many files needed for each script to run are generated in previous scripts.
+Once you have downloaded this repository, and the necesarry files from NHGIS, you are ready to proceed through the scripts used in the anlysis. The scripts must be run in order as many files needed for each script to run are generated in previous scripts.
 
 ## Data Preparation (/scripts/01_dataPrep.R)
 
-| spatial data is delivered in shapefile format from NHGIS and while it is still the most widely use spatial file format, it is not particularly fast. For this reason, we want to convert the format to something more compact that will load and process faster. For this, we will use the [geopackage format](https://www.gis-blog.com/geopackage-vs-shapefile/).
+spatial data is delivered in shapefile format from NHGIS and while it is still the most widely use spatial file format, it is not particularly fast. For this reason, we want to convert the format to something more compact that will load and process faster. For this, we will use the [geopackage format](https://www.gis-blog.com/geopackage-vs-shapefile/).
 
 Using the script '01_dataPrep.R', convert the block group shapefiles to geopackages and join the tabular data from the Census (downloaded from NHGIS).
 
@@ -58,7 +63,7 @@ Now that the data is prepared, the next step is to calculate the rate of well us
 
 The rate of well usage per block group in 1990. Block groups with a rate of zero (n = 128,725) not shown in this plot
 
-|       To rasterize 
+To rasterize 
 
 ## Convert rasterized data to 2010 boundaries (/scripts/03_convert_to_2010_boundaries.R)
 
