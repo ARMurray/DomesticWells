@@ -7,12 +7,10 @@ library(units)
 
 sf <- st_read(here("data/geopackage/reag_2010_boundaries_w_wells.gpkg"), layer = "All_Block_Groups_w_Wells")
 
-
-
-
 # RW Method (Equation 1)
 rwSf <- sf%>%
-  dplyr::filter(as.character(STATEFP10) %in% c("04","05","08","16","20","21","22","23","24","26","27","29","30","32","34","35","39","40","50","56"))%>%
+  dplyr::filter(as.character(STATEFP10) %in% c("04","05","08","16","20","21","22","23","24","26","27","29","30","32","34","35","39","40","50","56"))
+rwSf <- rwSf%>%
   mutate(Area = st_area(rwSf)%>%
       set_units(km^2))%>%
   mutate(wells90 = wells_km2_90 * as.numeric(Area),
@@ -37,6 +35,8 @@ nhuSf <- sf%>%
   dplyr::select(GISJOIN,STATEFP10, COUNTYFP10,Population, Housing_Units, wells_km2_90, hu_km2_90, hu_km2_00, Area, NHU_2000, NHU_2010)
 
 # Join to make one complete data set with all estimates
-dfOut <- left_join(nhuSf, rwSf)
+dfOut <- left_join(nhuSf, rwSf)%>%
+  mutate(hybrd_2000 = ifelse(is.na(RW_2000),NHU_2000,RW_2000),
+         hybrd_2010 = ifelse(is.na(RW_2010),NHU_2010,RW_2010))
 
-st_write(dfOut, here("data/geopackage/final_estimates.gpkg"), layer = "All_Estimates_Blk_Grps")
+st_write(dfOut, here("data/geopackage/final_estimates.gpkg"), layer = "All_Estimates_Blk_Grps", append = FALSE)
