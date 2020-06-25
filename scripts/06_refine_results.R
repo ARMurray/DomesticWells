@@ -73,9 +73,10 @@ leaflet(filt1)%>%
   addTiles()%>%
   addMarkers()
 
-t1_valid <- sf%>%
+t1 <- sf%>%
   mutate(T1_Valid = ifelse(((hu_km2_00-hu_km2_90)/hu_km2_90)<10,TRUE,FALSE))%>%
-  select(GISJOIN,T1_Valid)
+  select(GISJOIN,T1_Valid)%>%
+  st_drop_geometry()
 
 # Test #2: (2)	Housing change from 2000 - 2010:  Realistic housing unit density change was 
 # determined for block groups between 2000 and 2010 by identifying block groups which maintained 
@@ -122,9 +123,10 @@ leaflet(filt2)%>%
   addMarkers()
 
 
-t2_valid <- sf%>%
+t2 <- sf%>%
   mutate(T2_Valid = ifelse((((Housing_Units/Area)-hu_km2_00)/hu_km2_00)<10,TRUE,FALSE))%>%
-  select(GISJOIN,T2_Valid)
+  select(GISJOIN,T2_Valid)%>%
+  st_drop_geometry()
 
 
 # This section is a way to iterate through geometries to check for identical polygons, however
@@ -155,20 +157,34 @@ t2_valid <- sf%>%
 
 t3 <- sf%>%
   filter(hybrd_2010 > 0)%>%
-  mutate(T3_Valid = ifelse(hybrd_2010/(Housing_Units/as.numeric(Area))<= 1, TRUE, FALSE))
+  mutate(T3_Valid = ifelse(hybrd_2010/(Housing_Units/as.numeric(Area))<= 1, TRUE, FALSE))%>%
+  select(GISJOIN,T3_Valid)%>%
+  st_drop_geometry()
 
 # Test #4:
 
 t4 <- sf%>%
-  mutate(T4_Valid = ifelse(Housing_Units/as.numeric(Area)<1667,TRUE,FALSE))
+  mutate(T4_Valid = ifelse(Housing_Units/as.numeric(Area)<1667,TRUE,FALSE))%>%
+  select(GISJOIN,T4_Valid)%>%
+  st_drop_geometry()
 
 
 # Test #5: 
 
+t5 <- sf%>%
+  mutate(T5_Valid = ifelse(hybrd_2010<1667,TRUE,FALSE))%>%
+  select(GISJOIN, T5_Valid)%>%
+  st_drop_geometry()
 
 
-# Pop per household
-d <- st_read(here("data/geopackage/final_estimates.gpkg"))%>%
-  filter(Housing_Units > 0)
-#head(d)
-d$pPerhu <- d$Population/d$Housing_Units
+sfQA <- sf%>%
+  left_join(t1)%>%
+  left_join(t2)%>%
+  left_join(t3)%>%
+  left_join(t4)%>%
+  left_join(t5)%>%
+  mutate(Wells = hybrd_2010/Area)
+
+st_write(sfQA, here("data/geopackage/final_estimates.gpkg"), layer= "All_Estimates_Blk_Grps_QA", append = FALSE)
+
+
