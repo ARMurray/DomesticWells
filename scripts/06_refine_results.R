@@ -170,7 +170,6 @@ t4 <- sf%>%
 
 
 # Test #5: 
-
 t5 <- sf%>%
   mutate(T5_Valid = ifelse(hybrd_2010<1667,TRUE,FALSE))%>%
   select(GISJOIN, T5_Valid)%>%
@@ -183,7 +182,17 @@ sfQA <- sf%>%
   left_join(t3)%>%
   left_join(t4)%>%
   left_join(t5)%>%
-  mutate(Wells = hybrd_2010/Area)
+  mutate(Wells_NHU = ifelse(T1_Valid == FALSE & NHU_2010>Housing_Units/Area,Housing_Units,
+                        ifelse(T2_Valid == FALSE & NHU_2010>Housing_Units/Area,Housing_Units,
+                               ifelse(T3_Valid == FALSE & NHU_2010>Housing_Units/Area,Housing_Units,
+                                      ifelse(T4_Valid == FALSE & NHU_2010>Housing_Units/Area,Housing_Units,
+                                             ifelse(T5_Valid == FALSE, 1167, NHU_2010*Area))))))%>%
+  mutate(Wells_HYBRD = ifelse(T1_Valid == FALSE & hybrd_2010>Housing_Units/Area,Housing_Units,
+                        ifelse(T2_Valid == FALSE & hybrd_2010>Housing_Units/Area,Housing_Units,
+                        ifelse(T3_Valid == FALSE & hybrd_2010>Housing_Units/Area,Housing_Units,
+                               ifelse(T4_Valid == FALSE & hybrd_2010>Housing_Units/Area,Housing_Units,
+                                      ifelse(T5_Valid == FALSE, 1167, hybrd_2010*Area))))))
+
 
 st_write(sfQA, here("data/geopackage/final_estimates.gpkg"), layer= "All_Estimates_Blk_Grps_QA", append = FALSE)
 

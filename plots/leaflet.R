@@ -15,10 +15,10 @@ labels <- sprintf(
 ) %>% lapply(htmltools::HTML)
 
 bins <- c(0, 5, 10, 25, 50, 100, 250, 500, 1000, Inf)
-pal <- colorBin("YlOrRd", domain = sf84$Wells, bins = bins)
+pal <- colorBin("YlOrRd", domain = sf84$Wells_HYBRD, bins = bins)
 leaflet(sf84)%>%
   addTiles()%>%
-  addPolygons( fillColor = ~pal(Wells),
+  addPolygons( fillColor = ~pal(Wells_HYBRD),
                weight = 1,
                opacity = 1,
                color = "white",
