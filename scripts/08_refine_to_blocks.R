@@ -7,7 +7,8 @@ names <- list.files(here("data/shapefiles/nhgis_blocks"), pattern = ".shp$", ful
 
 
 blkGrps <- st_read(here("data/geopackage/final_estimates.gpkg"), layer= "All_Estimates_Blk_Grps_QA")%>%
-  st_drop_geometry()
+  st_drop_geometry()%>%
+  mutate(STATEFP10 = as.character(STATEFP10))
 
 
 tbl <- read.csv(here("data/tables/nhgis0247_ds172_2010_block.csv"))%>%
@@ -15,7 +16,8 @@ tbl <- read.csv(here("data/tables/nhgis0247_ds172_2010_block.csv"))%>%
 
 colnames(tbl) <- c("GISJOIN","Population","Housing_Units")
 
-for(n in 1:10){
+for(n in 1:length(files)){
+  print(paste0("Starting ", substr(names[n],1,2)," at: ",Sys.time()))
   sf <- st_read(files[n])%>%
     mutate("BlkGrp_ID" = substr(GISJOIN,1,15))%>%
     left_join(tbl)
@@ -23,22 +25,41 @@ for(n in 1:10){
   State <- as.character(sf$STATEFP10[1])
   
   filt <- blkGrps%>%
-    filter(STATEFP10 == State)%>%
-    select(GISJOIN, Wells_HYBRD, Housing_Units)
+    filter(blkGrps$STATEFP10 == "44")
+    select(GISJOIN,GEOID,State,County, Housing_Units,Well_Density_2010_Est,
+           Wells_2010_Est,Method,Wells_1990,Wells_2000_Est,Area)
   
-  colnames(filt) <- c("GISJOIN","Wells_BlkGrp","HU_BlkGrp")
+  colnames(filt) <- c("GISJOIN","GEOID","State","County","HU_BlkGrp",
+                      "Well_Density_BlkGrp2010","Wells_2010_BlkGrp",
+                      "Method","Wells_1990_BlkGrp","Wells_2000_BlkGrp","Area_BlkGrp")
   
   sfOut <- sf%>%
     left_join(filt, by = c("BlkGrp_ID" = "GISJOIN"))%>%
-    mutate("Wells" = round((Housing_Units/HU_BlkGrp)*Wells_BlkGrp))%>%
-    mutate("Population_Served" = round((Population/Housing_Units))*Wells)%>%
+    mutate("Wells" = round((Housing_Units/HU_BlkGrp)*Wells_2010_BlkGrp))%>%
+    mutate("Population_Served" = round((Population/Housing_Units))*Wells,
+           "Percent_Served" = Population_Served/Population,
+           "GEOID" = paste0(substr(GISJOIN,2,3), substr(GISJOIN,5,7), substr(GISJOIN,9,18)))#%>%
     select(GISJOIN,Population,Housing_Units,Wells,Population_Served)
 
-  st_write(sfOut, here("data/geopackage/final_estimates_blocks.gpkg"), layer= paste0(substr(names[n],1,2),"_Estimates_Blocks_QA"), append = FALSE)
+  #st_write(sfOut, here("data/geopackage/final_estimates_blocks.gpkg"), layer= paste0(substr(names[n],1,2),"_Estimates_Blocks_QA"), append = FALSE)
   
+  print(paste0("Finished ", substr(names[n],1,2)," at: ",Sys.time()))
 }
 
 
+# COLUMN NAMES FOR BLOCKS
 
+# GEOID
+# STATE
+# COUNTY
+# POPULATION (BLOCK)
+# HOUSING UNITS (Block)
+# WELL DENSITY
+# 2010 WELLS (EST)
+# METHOD
+# WELL USAGE RATE (EST)
+# POPULATION SERVED (EST)
+# 1990 WELLS
+# 2000 WELLS (EST)
 
 

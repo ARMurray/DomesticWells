@@ -194,6 +194,48 @@ sfQA <- sf%>%
                                       ifelse(T5_Valid == FALSE, 1167, hybrd_2010*Area))))))
 
 
-st_write(sfQA, here("data/geopackage/final_estimates.gpkg"), layer= "All_Estimates_Blk_Grps_QA", append = FALSE)
+# Organize the final dataset:
+# COLUMN NAMES FOR BLOCK GROUPS
+
+# GEOID x
+# STATE x
+# COUNTY x
+# POPULATION (BLOCK GROUP) x
+# HOUSING UNITS x
+# WELL DENSITY x
+# 2010 WELLS (EST) x
+# METHOD X
+# WELL USAGE RATE (EST) x
+# POPULATION SERVED (EST) x
+# TEST 1 PASS x
+# TEST 2 PASS x
+# TEST 3 PASS x
+# TEST 4 PASS x
+# TEST 5 PASS x
+# 1990 WELLS
+# 2000 WELLS (EST)
+
+cnty <- st_read(here("data/geopackage/nhgis_counties.gpkg"), layer = "2010_Counties")%>%
+  mutate(STCO = paste0(STATEFP,COUNTYFP))%>%
+  select(STCO,STATE,COUNTY)%>%
+  st_drop_geometry()
 
 
+sfFinal <- sfQA%>%
+  mutate("GEOID" = paste0(substr(GISJOIN,2,3), substr(GISJOIN,5,7), substr(GISJOIN,9,15)),
+         "STCO" = paste0(STATEFP10,COUNTYFP10))%>%
+  left_join(cnty, by = "STCO")%>%
+  mutate("Method" = ifelse(is.na(NHU_2010)&is.na(RW_2010),NA,
+                           ifelse(is.na(RW_2010),"NHU","RW")),
+         "Population_Served" = (Population/Housing_Units)*Wells_HYBRD,
+         "Well_Usage_Rate" = Population_Served/Population,
+         "1990_Wells" = round(wells_km2_90*Area),
+         "2000_Wells_Est"= round(hybrd_2000*Area))%>%
+  select(GISJOIN,GEOID,STATE,STATEFP10,COUNTY,Population,Housing_Units,hybrd_2010,Wells_HYBRD,Method,Well_Usage_Rate,
+         Population_Served,T1_Valid,T2_Valid,T3_Valid,T4_Valid,T5_Valid,"1990_Wells","2000_Wells_Est",Area)
+
+colnames(sfFinal) <- c("GISJOIN","GEOID","State","STATEFP10","County","Population_BlkGrp","Housing_Units",
+                       "Well_Density_2010_Est","Wells_2010_Est","Method","Well_Usage_Rate_2010_Est",
+                       "Population_Served_2010_Est","T1_Pass","T2_Pass","T3_Pass","T4_Pass","T5_Pass","Wells_1990","Wells_2000_Est","Area","geom")
+
+st_write(sfFinal, here("data/geopackage/final_estimates.gpkg"), layer= "All_Estimates_Blk_Grps_QA", append = FALSE)
