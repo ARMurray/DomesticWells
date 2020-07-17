@@ -53,10 +53,12 @@ for(n in 1:length(files)){
                        "Well_Usage_Rate_Est","Population_Served_Est","Wells_1990_Est","Wells_2000_Est","geometry")
   st_write(sfOut, here("data/geopackage/final_estimates_blocks.gpkg"), layer= paste0(substr(names[n],1,2),"_Estimates_Blocks_QA"), append = FALSE)
   
+  write.csv(sfOut, paste0(here("data/csv/final_estimates_blocks_"),substr(names[n],1,2),".csv"))
+  
   print(paste0("Finished ", substr(names[n],1,2)," at: ",Sys.time()))
 }
 
-
+write.csv(blkGrps,here("data/csv/final_estimates_blockGroups/All_Estimates_Blk_Grps_QA.csv"))
 # COLUMN NAMES FOR BLOCKS
 
 # GEOID
