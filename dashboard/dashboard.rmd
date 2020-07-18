@@ -1,0 +1,84 @@
+---
+title: "Well Water Dashboard"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+    theme: bootstrap
+---
+
+```{r setup, include=FALSE}
+library(crosstalk)
+library(plotly)
+library(flexdashboard)
+library(leaflet)
+library(sf)
+library(here)
+library(DT)
+library(dplyr)
+library(sp)
+sf <- st_read(here("data/geopackage/final_estimates.gpkg"), layer= "All_Estimates_Blk_Grps_QA")
+spSel <- as(sf,"Spatial")
+
+# Create different shared objects for the table and the map
+sd_map <- SharedData$new(spSel)
+sd_df <- SharedData$new(as.data.frame(spSel@data), group = sd_map$groupName())
+
+```
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Filters
+
+```{r filters}
+#Create crosstalk filters using sd_df:
+
+filter_select("filterState",
+    "State",
+    sd_df,
+    ~State)
+
+filter_select("filterid",
+    "County",
+    sd_df,
+    ~County)
+
+filter_slider(
+    id = "Popid",
+    label = "Total Population",
+    sharedData = sd_df,
+    column = ~Population_BlkGrp,
+    step = 100,
+    round = TRUE,
+    sep = "",
+    ticks = FALSE
+  )
+```
+
+### Table
+
+```{r dt}
+sd_df%>%
+  datatable()
+```
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+### Population and Wells
+
+```{r plot1}
+sd_df%>%
+  plot_ly()%>%
+  add_markers(x=~Housing_Units/Area,y=~Well_Density_2010_Est,color=~County)
+```
+
+### Plot
+
+```{r plotly}
+sd_df%>%
+  plot_ly()%>%
+  add_markers(x=~Housing_Units/Area,y=~Well_Density_2010_Est,color=~County)
+```
+
